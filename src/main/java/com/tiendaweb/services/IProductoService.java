@@ -1,7 +1,9 @@
 package com.tiendaweb.services;
 
 import com.tiendaweb.models.Producto;
+import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
 
@@ -17,4 +19,7 @@ public interface IProductoService {
 
     // buscamos por el codigo del producto
     Optional<Producto> buscarPorCodigo(int codigo);
+
+    // creamos el export a excel
+    void exportExcel(final HttpServletResponse response) throws IOException, Exception;
 }

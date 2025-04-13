@@ -16,4 +16,7 @@ public interface IUsuarioRepository extends JpaRepository<Usuario, Long> {
 
     // buscamos el rol del usuario cuyo sesa igual a 2
     List<Usuario> findByRolId(long idRol);
+
+    // obtenemos todos los usuarios
+    List<Usuario> findAll();
 }

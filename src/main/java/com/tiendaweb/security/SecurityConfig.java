@@ -57,9 +57,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/error").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/usuarios/listar").hasAuthority("ADMIN")
-                                .requestMatchers(HttpMethod.GET,"/api/usuarios/listar-clientes").hasAuthority("ADMIN")
+                                .requestMatchers("/api/usuarios/**").hasAuthority("ADMIN")
                                 .requestMatchers("/api/categoria/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/estados/listar").hasAuthority("ADMIN")
                                 .requestMatchers("/api/productos/**").hasAuthority("ADMIN")

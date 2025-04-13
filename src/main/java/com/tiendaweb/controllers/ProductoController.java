@@ -8,6 +8,7 @@ import com.tiendaweb.repositories.ICategoriaRepository;
 import com.tiendaweb.repositories.IEstadoRepository;
 import com.tiendaweb.repositories.IProductoRepository;
 import com.tiendaweb.services.IProductoService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.hibernate.StaleObjectStateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,6 +46,12 @@ public class ProductoController {
     @GetMapping("listar")
     public ResponseEntity<?> obtenerTodo() {
         return ResponseEntity.ok(productService.obtenerTodo());
+    }
+
+    @GetMapping("export-excel")
+    public void exportExcel(HttpServletResponse response) throws IOException, Exception{
+        response.setHeader("Content-Disposition", "attachment; filename=productos.xlsx");
+        this.productService.exportExcel(response);
     }
 
     @PostMapping("create-prod")
