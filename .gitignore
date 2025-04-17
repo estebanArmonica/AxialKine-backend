@@ -33,8 +33,11 @@ build/
 .vscode/
 
 ### ENV ###
-.env
+/.env
+
+### DOCKERFILE ###
+/Dockerfile
 
 ### IGNORAMOS LOS APPLICATION.PROPERTIES DEV Y PROD ###
-/src/main/resources/application-dev.properties
-/src/main/resources/application-prod.properties
+!/src/main/resources/application-dev.properties
+!/src/main/resources/application-prod.properties
