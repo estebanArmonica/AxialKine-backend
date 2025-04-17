@@ -33,11 +33,11 @@ build/
 .vscode/
 
 ### ENV ###
-/.env
-
-### DOCKERFILE ###
-/Dockerfile
+.env
+.env.MYSQL_URL
+.env.MYSQL_USER
+.env.MYSQL_PASSWORD
 
 ### IGNORAMOS LOS APPLICATION.PROPERTIES DEV Y PROD ###
-!/src/main/resources/application-dev.properties
+!/src/main/resources/application-prod.properties
 !/src/main/resources/application-prod.properties
