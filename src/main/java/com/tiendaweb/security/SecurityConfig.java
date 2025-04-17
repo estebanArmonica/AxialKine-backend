@@ -15,10 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-//Le indica al contenedor de spring que esta es una clase de seguridad al momento de arrancar la aplicación
 @EnableWebSecurity
-//Indicamos que se activa la seguridad web en nuestra aplicación y además esta será una clase la cual contendrá toda la configuración referente a la seguridad
-
 public class SecurityConfig {
     private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
@@ -57,6 +54,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/swagger-ui.html/**",
+                                                           "/swagger-ui/**",
+                                                           "/v3/api-docs/**").permitAll()
                                 .requestMatchers("/api/usuarios/**").hasAuthority("ADMIN")
                                 .requestMatchers("/api/categoria/**").hasAuthority("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/estados/listar").hasAuthority("ADMIN")

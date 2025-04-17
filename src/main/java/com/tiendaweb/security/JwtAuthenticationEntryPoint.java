@@ -8,7 +8,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import org.springframework.security.web.AuthenticationEntryPoint;
 
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {

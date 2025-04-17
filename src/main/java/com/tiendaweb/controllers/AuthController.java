@@ -9,6 +9,11 @@ import com.tiendaweb.models.Usuario;
 import com.tiendaweb.repositories.IRolRepository;
 import com.tiendaweb.repositories.IUsuarioRepository;
 import com.tiendaweb.security.JwtGenerador;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,7 +37,8 @@ import java.util.Collections;
 
 @RestController
 @RequestMapping("api/auth/")
-@CrossOrigin("*")
+@Tag(name = "Authentication", description = "Controller for Authentication")
+@CrossOrigin(origins = {"http://localhost:4200"},methods = RequestMethod.POST)
 public class AuthController {
     private AuthenticationManager authenticationManager;
     private PasswordEncoder passwordEncoder;
@@ -51,6 +57,29 @@ public class AuthController {
 
     // creamos un usuario normal
     @PostMapping("create-user")
+    @Operation(
+            summary = "Crear Usuario",
+            description = "Registro de un usuario, el cual retorna un user.",
+            tags = {"Authentication"},
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Registro de un usuario",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = RegistroDto.class)
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Autenticacion exitosa",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = RegistroDto.class)
+                            )
+                    )
+            }
+    )
     public ResponseEntity<String> crearUsuario(@ModelAttribute RegistroDto dtoRegistro) throws Exception {
         try {
             if(userRepo.existsByUsername(dtoRegistro.getUsername())){
@@ -90,6 +119,29 @@ public class AuthController {
 
     // creamos un usuario normal
     @PostMapping("create-admin")
+    @Operation(
+            summary = "Crear Admin",
+            description = "Registro de un usuario, el cual retorna un user admin.",
+            tags = {"Authentication"},
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Registro de un usuario admin",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = RegistroDto.class)
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Autenticacion exitosa",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = RegistroDto.class)
+                            )
+                    )
+            }
+    )
     public ResponseEntity<String> crearAdmin(@ModelAttribute RegistroDto dtoRegistro) throws Exception {
         try {
             if(userRepo.existsByUsername(dtoRegistro.getUsername())){
@@ -141,6 +193,29 @@ public class AuthController {
 
     // authentificacion
     @PostMapping("login")
+    @Operation(
+            summary = "Login Usuario",
+            description = "Autenticación que retorna el token del usuario.",
+            tags = {"Authentication"},
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Autenticacion requiere de un username y password",
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = LoginDto.class)
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Autenticacion exitosa",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = LoginDto.class)
+                            )
+                    )
+            }
+    )
     public ResponseEntity<AuthRespuestaDto> login(@RequestBody LoginDto loginDto, HttpSession session) {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);

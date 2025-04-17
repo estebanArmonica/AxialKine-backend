@@ -54,7 +54,6 @@ public class JwtGenerador {
     // método para validar el token
     public Boolean validarToken(String token) {
         try {
-            System.out.println("Validando Token: " + token);
             //Validación del token por medio de la firma que contiene el String token(token)
             //Si son idénticas validara el token o caso contrario saltara la excepción de abajo
             Jwts.parser()

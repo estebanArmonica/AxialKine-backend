@@ -34,3 +34,7 @@ build/
 
 ### ENV ###
 .env
+
+### IGNORAMOS LOS APPLICATION.PROPERTIES DEV Y PROD ###
+/src/main/resources/application-dev.properties
+/src/main/resources/application-prod.properties
