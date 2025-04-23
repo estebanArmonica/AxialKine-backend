@@ -1,124 +1,203 @@
 package com.tiendaweb.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tiendaweb.models.Producto;
+import com.tiendaweb.commands.Command;
+import com.tiendaweb.commands.factory.TareaCommandFactory;
+import com.tiendaweb.exception.ResourceNotFoundException;
 import com.tiendaweb.models.Tarea;
 import com.tiendaweb.repositories.IProductoRepository;
 import com.tiendaweb.services.ITareaService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.ValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.sql.rowset.serial.SerialBlob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.sql.Blob;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("api/tareas/")
+@Tag(name = "tareas", description = "Controlador para crear actividades para cada producto")
 @CrossOrigin(origins = {"http://localhost:4200"},
         methods = {RequestMethod.GET,RequestMethod.POST, RequestMethod.PUT})
 public class TareaController {
 
-    private ITareaService tareaService;
-    private IProductoRepository productoRepo;
+    private final ITareaService tareaService;
+    private final IProductoRepository productoRepo;
+    private final TareaCommandFactory tareaCommandFactory;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public TareaController(ITareaService tareaService, IProductoRepository productoRepo) {
+    public TareaController(ObjectMapper objectMapper, TareaCommandFactory tareaCommandFactory, ITareaService tareaService, IProductoRepository productoRepo) {
         this.tareaService = tareaService;
         this.productoRepo = productoRepo;
+        this.tareaCommandFactory = tareaCommandFactory;
+        this.objectMapper = objectMapper;
     }
 
-    // listamos todas las tareas
+    // listamos todas las tareas (GET)
     @GetMapping("listar")
-    public ResponseEntity<?> obtenerTodoTarea() {
+    @Operation(
+            summary = "Listado de todas las tareas disponibles",
+            description = "Retorna un conjunto de todas las tareas de los productos disponibles",
+            tags = {"tareas"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido con éxito",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(type = "array", implementation = Tarea.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "No hay tareas para los productos registradas para listar"
+                    )
+            }
+    )
+    public ResponseEntity<List<Tarea>> obtenerTodoTarea() {
         // devuelve 200 OK
-        return ResponseEntity.ok(tareaService.obtenerTodoTarea());
+        try {
+            Command<List<Tarea>> command = tareaCommandFactory.obtenerTareaCommand();
+            List<Tarea> tareas = command.execute();
+            return ResponseEntity.ok(tareas);
+        } catch(Exception e) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
     }
 
-    // buscamos por el id da la tarea
+    // buscamos por el id da la tarea (GET/ID)
     @GetMapping("listar/{id}")
+    @Operation(
+            summary = "Listar por id",
+            description = "Endpoint para listar una tarea existente por id",
+            tags = {"tareas"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido exitosamente",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            type = "array",
+                                            implementation = Tarea.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "No existe el producto buscado"
+                    )
+            }
+    )
     public ResponseEntity<?> obtenerPorIdTarea(@PathVariable("id") Long id)throws Exception, NullPointerException, FileNotFoundException {
-        return ResponseEntity.ok(tareaService.buscarPorIdTarea(id));
+        try {
+            Command<Optional<Tarea>> command = tareaCommandFactory.buscarTareaCommand(id);
+            Optional<Tarea> tareas = command.execute();
+            return ResponseEntity.ok(tareas);
+        }catch(Exception e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
     }
 
-    // creamos una tarea
-    @PostMapping("crear-tarea")
-    public ResponseEntity<Tarea> agregarTarea(@RequestParam("tarea") String tareaJson, @RequestParam("video")MultipartFile videoFile) throws IOException, Exception {
+    // creamos una tarea (POST)
+    @PostMapping(value = "crear-tarea", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Registra una nueva tarea para un producto",
+            description = "Retorna un json de los datos de la tarea creada",
+            tags = {"tareas"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Tarea creada correctamente",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Tarea.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Error interno del servidor"
+                    )
+            }
+    )
+    public ResponseEntity<Tarea> agregarTarea(@Parameter(name = "tarea", description = "JSON con los datos para crear una tarea", in = ParameterIn.QUERY, schema = @Schema(type = "string", example = "{\"nombre\":\"Ejemplo\",\"prod_id\":1}"))
+                                              @RequestParam("tarea") String tareaJson,
+                                              @Parameter(name = "video", description = "Video para una tarea (mp4)", content = @Content(mediaType = "application/octet-stream"), schema = @Schema(type = "string", format = "binary"))
+                                              @RequestParam("video")MultipartFile videoFile) throws IOException, Exception {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             Tarea tarea = objectMapper.readValue(tareaJson, Tarea.class);
 
-            // AGREGAMOS UNA TAREA
-            tarea.setNombre(tarea.getNombre());
+            Command<Tarea> command = tareaCommandFactory.createTareaCommand(tarea, videoFile);
 
-            // guardamos la imagen en el objecto
-            if (videoFile != null && !videoFile.isEmpty()) {
-                Blob blob = createBlobFromMultiPartFile(videoFile);
-                tarea.setVideo(blob);
-            }
+            Tarea tareaValida = command.execute();
+            Tarea crear = tareaService.agregarTarea(tareaValida);
 
-            // agregamos un producto
-            if(tarea.getProducto() != null && tarea.getProducto().getCodigo() != 0){
-                Producto producto = productoRepo.findById(tarea.getProducto().getCodigo()).orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-                tarea.setProducto(producto);
-            }
-
-            System.out.println("Video BLOB: " + tarea.getVideo());
-            System.out.println("Producto ID: " + tarea.getProducto().getCodigo());
-
-            // guardamos los datos
-            Tarea tareaNuevo = tareaService.agregarTarea(tarea);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(tareaNuevo);
-        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.CREATED).body(crear);
+        } catch ( IOException e){
+            System.out.println("Error al crear la tarea: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch ( Exception e){
             System.out.println("Error al crear la tarea: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
-    // creamos una tarea
-    @PutMapping("update-tarea/{id}")
-    public ResponseEntity<Tarea> updateTarea(Long id, @RequestParam("tarea") String tareaJson, @RequestParam("video")MultipartFile videoFile) throws IOException, Exception {
+    // Actualizamos una tarea (PUT/ID)
+    @PutMapping(value = "update-tarea/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Actualizamos una tarea existente de un producto",
+            description = "Retorna una actualizacion de la tarea buscada por el ID",
+            tags = {"tareas"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Tarea creada correctamente",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = Tarea.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Error interno del servidor"
+                    )
+            }
+    )
+    public ResponseEntity<Tarea> updateTarea(@PathVariable("id") Long id,
+                                             @Parameter(name = "tarea", description = "JSON con los datos de una tarea", in = ParameterIn.QUERY, schema = @Schema(type = "string", example = "{\"nombre\":\"Ejemplo\",\"prod_id\":1}"))
+                                             @RequestParam("tarea") String tareaJson,
+                                             @Parameter(name = "video", description = "Video de una tarea (mp4)",content = @Content(mediaType = "application/octet-stream"), schema = @Schema(type = "string", format = "binary"))
+                                             @RequestParam("video")MultipartFile videoFile) throws IOException, Exception {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             Tarea tarea = objectMapper.readValue(tareaJson, Tarea.class);
 
-            // buscamos una tarea por el id
-            Tarea tareaExistente = tareaService.buscarPorIdTarea(id).orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
+            Command<Tarea> command = tareaCommandFactory.updateTareaCommand(id, tarea, videoFile);
 
-            // AGREGAMOS UNA TAREA
-            tareaExistente.setNombre(tarea.getNombre());
-
-            // guardamos la imagen en el objecto
-            if (videoFile != null && !videoFile.isEmpty()) {
-                Blob blob = createBlobFromMultiPartFile(videoFile);
-                tareaExistente.setVideo(blob);
-            }
-
-            // agregamos un producto
-            if(tarea.getProducto() != null && tarea.getProducto().getCodigo() != 0){
-                Producto producto = productoRepo.findById(tarea.getProducto().getCodigo()).orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-                tareaExistente.setProducto(producto);
-            }
-
-            System.out.println("Video BLOB: " + tarea.getVideo());
-            System.out.println("Producto ID: " + tarea.getProducto().getCodigo());
-
-            // guardamos los datos
-            Tarea tareaActualizada = tareaService.updateTarea(id, tareaExistente);
-
-            return ResponseEntity.status(HttpStatus.OK).body(tareaActualizada);
-        } catch (Exception e){
-            System.out.println("Error al crear la tarea: " + e.getMessage());
+            Tarea actualizar = command.execute();
+            return ResponseEntity.ok(actualizar);
+        } catch (ValidationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
-    }
-
-    private Blob createBlobFromMultiPartFile(MultipartFile file) throws Exception, IOException {
-        byte[] bytes = file.getBytes();
-        return new SerialBlob(bytes);
     }
 }

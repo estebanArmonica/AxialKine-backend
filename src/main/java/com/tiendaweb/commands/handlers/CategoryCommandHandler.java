@@ -24,11 +24,13 @@ public class CategoryCommandHandler {
     }
 
     // listamos todas las categorias (GET)
+    @Transactional(readOnly = true)
     public Set<Categoria> handle(ListCategoryCommandImpl command) {
         return cateService.obtenerTodo();
     }
 
     // listamos con el id de una categoria (GET/ID)
+    @Transactional(readOnly = true)
     public Categoria handle(ListIdCategoryCommandImpl command) {
         return cateService.obtenerIdCategoria(command.getId());
     }

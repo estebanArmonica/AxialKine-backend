@@ -1,169 +1,182 @@
 package com.tiendaweb.controllers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tiendaweb.models.Categoria;
-import com.tiendaweb.models.Estado;
+import com.tiendaweb.commands.Command;
+import com.tiendaweb.commands.factory.ProductoCommandFactory;
+import com.tiendaweb.exception.BusinessException;
+import com.tiendaweb.exception.ConcurrencyException;
+import com.tiendaweb.exception.ResourceNotFoundException;
+import com.tiendaweb.exception.ValidationException;
 import com.tiendaweb.models.Producto;
-import com.tiendaweb.repositories.ICategoriaRepository;
-import com.tiendaweb.repositories.IEstadoRepository;
-import com.tiendaweb.repositories.IProductoRepository;
-import com.tiendaweb.services.IProductoService;
-import jakarta.servlet.http.HttpServletResponse;
-import org.hibernate.StaleObjectStateException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.*;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.sql.rowset.serial.SerialBlob;
 import java.io.IOException;
-import java.sql.Blob;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("api/productos/")
+@Tag(name = "productos", description = "Controlador de productos")
 @CrossOrigin(origins = {"http://localhost:4200"},
         methods = {RequestMethod.GET,RequestMethod.POST, RequestMethod.PUT})
 public class ProductoController {
 
-    private IProductoService productService;
-    private ICategoriaRepository cateRepo;
-    private IEstadoRepository estadoRepo;
-    private IProductoRepository prodRepo;
+    private final ObjectMapper objectMapper;
+    private final ProductoCommandFactory commandFactory;
 
     @Autowired
-    public ProductoController(IProductoService productService, ICategoriaRepository cateRepo, IEstadoRepository estadoRepo, IProductoRepository prodRepo) {
-        this.productService = productService;
-        this.cateRepo = cateRepo;
-        this.estadoRepo = estadoRepo;
-        this.prodRepo = prodRepo;
+    public ProductoController(ObjectMapper objectMapper, ProductoCommandFactory commandFactory) {
+        this.commandFactory = commandFactory;
+        this.objectMapper = objectMapper;
     }
 
-    // listamos todos los productos
+    // listamos todos los productos (GET)
     @GetMapping("listar")
-    public ResponseEntity<?> obtenerTodo() {
-        return ResponseEntity.ok(productService.obtenerTodo());
-    }
-
-    @GetMapping("export-excel")
-    public void exportExcel(HttpServletResponse response) throws IOException, Exception{
-        response.setHeader("Content-Disposition", "attachment; filename=productos.xlsx");
-        this.productService.exportExcel(response);
-    }
-
-    @PostMapping("create-prod")
-    public ResponseEntity<Producto> agregarProducto(@RequestParam("producto") String productoJson, @RequestParam("imagen") MultipartFile imagenFile) throws Exception, IOException {
+    @Operation(
+            summary = "Listar todos los productos disponibles",
+            description = "Retorna un conjunto de todos los productos disponibles.",
+            tags = {"productos"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido exitosamente",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            type = "array",
+                                            implementation = Producto.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "No hay productos registrados"
+                    )
+            }
+    )
+    public ResponseEntity<List<Producto>> obtenerTodo() {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
+            Command<List<Producto>> command = commandFactory.obtenerTodoProductoCommand();
+            List<Producto> productos = command.execute();
+            return ResponseEntity.ok(productos);
+        } catch (Exception e) {
+            System.out.println("NO CONTENT: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+    }
+
+    // buscamos un producto por el ID (GET/ID)
+    @GetMapping("listar/{codigo}")
+    @Operation(
+            summary = "Listar por id",
+            description = "Endpoint para listar un producto existente por id",
+            tags = {"Productos"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido exitosamente",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(
+                                            type = "array",
+                                            implementation = Producto.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "204",
+                            description = "No existe el producto buscado"
+                    )
+            }
+    )
+    public ResponseEntity<?> buscarPorCodigo(@PathVariable("codigo") int codigo) {
+        try {
+            Command<Optional<Producto>> command = commandFactory.buscarProductoCommand(codigo);
+            return ResponseEntity.ok(command);
+        } catch (Exception e) {
+            System.out.println("BAD REQUEST: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    // creamos un nuevo producto (POST)
+    @PostMapping(value = "create-prod", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Crear producto", description = "Endpoint para registrar un nuevo producto con imagen", tags = {"Productos"})
+    public ResponseEntity<Producto> agregarProducto(@Parameter(name = "producto", description = "JSON con los datos del producto", in = ParameterIn.QUERY, schema = @Schema(type = "string", example = "{\"nombre\":\"Ejemplo\",\"precio\":100}"))
+                                                    @RequestParam("producto") String productoJson,
+                                                    @Parameter(name = "imagen", description = "Imagen del producto (JPEG, PNG)", content = @Content(mediaType = "application/octet-stream"), schema = @Schema(type = "string", format = "binary"))
+                                                    @RequestParam("imagen")  MultipartFile imagenFile) throws Exception, IOException {
+        try {
             Producto producto = objectMapper.readValue(productoJson, Producto.class);
-
-            // si el producto tiene un ID, intenta cargarlo dede la base de datos para obtener la version
-            if(producto.getCodigo() != 0){
-                Producto productoExistente = prodRepo.findById(producto.getCodigo())
-                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-                producto.setVersion(productoExistente.getVersion()); // copia la version existente
-            }
-
-            // guardamos la imagen en el objecto
-            if (imagenFile != null && !imagenFile.isEmpty()) {
-                Blob blob = createBlobFromMultiPartFile(imagenFile);
-                producto.setImagen(blob);
-            }
-
-            // agreamos los demas datos de la clase
-            producto.setNombre(producto.getNombre());
-            producto.setPrecio(producto.getPrecio());
-            producto.setCreado(producto.getCreado());
-            producto.setTerminado(producto.getTerminado());
-            producto.setDescripcion(producto.getDescripcion());
-            producto.setEstado(producto.getEstado());
-
-            // agregamos la categoria
-            if(producto.getCate() != null && producto.getCate().getId() != 0){
-                Categoria categoria = cateRepo.findById(producto.getCate().getId()).orElseThrow(() -> new RuntimeException("Categoria no encontrada"));
-                producto.setCate(categoria);
-            }
-
-            System.out.println("fecha creado formato: " + producto.getCreado());
-            System.out.println("fecha terminado formato: " + producto.getTerminado());
-
-            // creamos un estado para el producto
-            Estado estado = estadoRepo.findByTipo("Habilitado").get();
-            producto.setEstado(Collections.singletonList(estado));
+            Command<Producto> createCommand = commandFactory.createProductoCommand(producto, imagenFile);
 
             // guardamos los datos
-            Producto prodNuevo = productService.agregarProducto(producto);
+            Producto prodNuevo = createCommand.execute();
 
             return ResponseEntity.status(HttpStatus.CREATED).body(prodNuevo);
-        } catch (StaleObjectStateException e) {
-            System.out.println("El producto fue modificado por otra transacción: " + e.getMessage());
+        } catch (ValidationException e) {
+            System.out.println("BAD REQUEST: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (ResourceNotFoundException e) {
+            System.out.println("NOT FOUND: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (ConcurrencyException e) {
+            System.out.println("CONFLICT: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
+        } catch (IOException e) {
+            System.out.println("INTERNAL SERVER ERROR (IOexception): " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         } catch (Exception e) {
-            System.out.println("Error al crear el producto: " + e.getMessage());
+            System.out.println("INTERNAL SERVER ERROR (Exception): " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
-    private Blob createBlobFromMultiPartFile(MultipartFile file) throws SQLException, IOException {
-        byte[] bytes = file.getBytes();
-        return new SerialBlob(bytes);
-    }
-
-    // actualizar un producto (arreglo, se arreglo pero se tiene que probar)
-    @PutMapping("/update-prod/{codigo}")
-    public ResponseEntity<Producto> actualizarProducto(@PathVariable("codigo") int codigo, @RequestParam("producto") String productoJson, @RequestParam("imagen") MultipartFile imagenFile) throws Exception, IOException, NullPointerException {
+    // actualizar un producto (PUT/ID)
+    @PutMapping(value = "/update-prod/{codigo}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Actualizar Producto", description = "Endpoint para actualizar un producto existente", tags = {"Productos"})
+    public ResponseEntity<Producto> actualizarProducto(@PathVariable("codigo") int codigo,
+                                                       @Parameter(name = "producto", description = "JSON con los datos del producto", in = ParameterIn.QUERY, schema = @Schema(type = "string", example = "{\"nombre\":\"Ejemplo\",\"precio\":100}"))
+                                                       @RequestParam("producto") String productoJson,
+                                                       @Parameter(name = "imagen", description = "Imagen del producto (JPEG, PNG)", content = @Content(mediaType = "application/octet-stream"), schema = @Schema(type = "string", format = "binary"))
+                                                       @RequestParam("imagen") MultipartFile imagenFile) throws Exception, IOException, NullPointerException {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             Producto producto = objectMapper.readValue(productoJson, Producto.class);
 
-            // buscamos el id del producto "en este caso el codigo"
-            Producto productoExistente = productService.buscarPorCodigo(codigo).orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-
-            // actualizamos los campos del producto
-            productoExistente.setNombre(producto.getNombre());
-            productoExistente.setPrecio(producto.getPrecio());
-            productoExistente.setCreado(producto.getCreado());
-            productoExistente.setTerminado(producto.getTerminado());
-            productoExistente.setDescripcion(producto.getDescripcion());
-
-            // guardamos la imagen en el objecto
-            if (imagenFile != null && !imagenFile.isEmpty()) {
-                Blob blob = createBlobFromMultiPartFile(imagenFile);
-                productoExistente.setImagen(blob);
-            }
-
-            // actualizamos la categoria en el producto
-            if(producto.getCate().getId() != 0){
-                Categoria categoria = cateRepo.findById(producto.getCate().getId()).orElseThrow(() -> new RuntimeException("Categoria no encontrada"));
-                productoExistente.setCate(categoria);
-            }
-
-            // actualizamos el estado de un producto
-            if(producto.getEstado() != null && !producto.getEstado().isEmpty()){
-                List<Estado> nuevoEstado = new ArrayList<>();
-                for(Estado estados : producto.getEstado()){
-                    Estado estadoExistente = estadoRepo.findById(estados.getId())
-                            .orElseThrow(() -> new RuntimeException("Estado no encontrado: " + estados.getTipo()));
-                    nuevoEstado.add(estadoExistente);
-                }
-                productoExistente.setEstado(nuevoEstado);
-            }
+            Command<Producto> updateCommand = commandFactory.updateProductoCommand(codigo, producto, imagenFile);
 
             // guardamos los datos del nuevo producto
-            Producto productoActualizado = productService.updateProducto(codigo, productoExistente);
+            Producto productoActualizado = updateCommand.execute();
 
             // retornamos los datos guardados
             return ResponseEntity.status(HttpStatus.OK).body(productoActualizado);
-        } catch (DataIntegrityViolationException ex) {
-            System.out.println("BAD REQUEST (DataIntegrityViolationException): "+ ex.getMessage());
+        } catch (ValidationException e) {
+            System.err.println("BAD REQUEST: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (ResourceNotFoundException e) {
+            System.err.println("NOT FOUND: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (BusinessException e) {
+            System.err.println("CONFLICT: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (IOException e) {
+            System.err.println("INTERNAL SERVER ERROR (IOException): " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (Exception e) {
-            System.out.println("INTERNAL SERVER ERROR (Exception): "+ e.getMessage());
+            System.err.println("INTERNAL SERVER ERROR (Exception): " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

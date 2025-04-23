@@ -6,25 +6,21 @@ import com.tiendaweb.commands.impl.categoria.ListCategoryCommandImpl;
 import com.tiendaweb.commands.impl.categoria.ListIdCategoryCommandImpl;
 import com.tiendaweb.commands.impl.categoria.UpdateCategoryCommandImpl;
 import com.tiendaweb.models.Categoria;
-import com.tiendaweb.services.ICategoriaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("api/categoria/")
-@Tag(name = "Categoria")
+@Tag(name = "Categoria", description = "Controlador de Categorias")
 @CrossOrigin(origins = {"http://localhost:4200"},
              methods = {RequestMethod.GET,RequestMethod.POST, RequestMethod.PUT})
 public class CategoriaController {
@@ -103,10 +99,10 @@ public class CategoriaController {
     @PostMapping("crear-cate")
     @Operation(
             summary = "Create a new Category",
-            description = "endpoint which create an new category",
+            description = "Crea una categoria con los datos correspondiente que agrege el admin",
             tags = {"Categoria"},
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Required data: 'description' (required). Example: {\"description\": \\\"Electronics\\\"}",
+                    description = "Dato requerido: 'descripcion' (required). Example: {\"descripcion\": \\\"Electronics\\\"}",
                     required = true,
                     content = @Content(
                             mediaType = "application/json",
@@ -116,7 +112,7 @@ public class CategoriaController {
             responses = {
                     @ApiResponse(
                             responseCode = "201",
-                            description = "Created a new Category",
+                            description = "Categoria creada con éxito",
                             content = @Content(
                                     mediaType = "application/json",
                                     schema = @Schema(implementation = Categoria.class)
@@ -124,15 +120,15 @@ public class CategoriaController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Validation error (e.g. empty description field)"
+                            description = "Error validación (e.g. campo descripcion vacío)"
                     ),
                     @ApiResponse(
                             responseCode = "409",
-                            description = "Conflict (e.g. category already exists)"
+                            description = "Conflict (e.g. La categoria ya existe)"
                     ),
                     @ApiResponse(
                             responseCode = "500",
-                            description = "Internal Server Error"
+                            description = "Error interno del servidor"
                     )
             }
     )
@@ -145,11 +141,11 @@ public class CategoriaController {
     // actualizamos una categoria
     @PutMapping("update-cate/{idCate}")
     @Operation(
-            summary = "Update a Category for ID",
-            description = "endpoint which update an category, required permiss ADMIN",
+            summary = "Actualizamos una Categoria por el ID",
+            description = "Actualizamos un dato de la categoria requiere permisos de ADMIN",
             tags = {"Categoria"},
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Update a category with the corresponding data",
+                    description = "Actualizamos un dato de una de las categorias disponibles",
                     required = true,
                     content = @Content(
                             mediaType = "application/json",
@@ -159,7 +155,7 @@ public class CategoriaController {
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Update Category",
+                            description = "Actualizada correctamente",
                             content = @Content(
                                     mediaType = "application/json",
                                     schema = @Schema(implementation = Categoria.class)
@@ -167,15 +163,15 @@ public class CategoriaController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Error in the data provided"
+                            description = "Error en el formato del dato"
                     ),
                     @ApiResponse(
                             responseCode = "404",
-                            description = "Category not found"
+                            description = "No existe la categoria"
                     ),
                     @ApiResponse(
                             responseCode = "500",
-                            description = "Internal Server Error"
+                            description = "Error interno del servidor"
                     )
             }
     )

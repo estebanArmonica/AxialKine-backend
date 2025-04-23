@@ -4,13 +4,13 @@ import com.tiendaweb.models.Usuario;
 import com.tiendaweb.repositories.IRolRepository;
 import com.tiendaweb.repositories.IUsuarioRepository;
 import com.tiendaweb.strategys.service.ReportExporterService;
-import jakarta.servlet.ServletOutputStream;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +22,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("api/usuarios/")
+@Tag(name = "usuarios")
 @CrossOrigin(origins = {"http://localhost:4200"},
         methods = {RequestMethod.GET, RequestMethod.PUT})
 public class UsuarioController {
@@ -39,6 +40,21 @@ public class UsuarioController {
 
     // listamos a todos los usuarios, independiente de su rol
     @GetMapping("listar")
+    @Operation(
+            summary = "Listado de todos los usuarios registrados",
+            description = "Retorna un conjunto de una lista de todos los usuarios independiente de su rol",
+            tags = {"usuarios"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido con éxito",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(type = "array", implementation = Usuario.class)
+                            )
+                    )
+            }
+    )
     public ResponseEntity<List<Usuario>> obtenerTodo(){
         try {
             List<Usuario> usuarios = userRepo.findAll();
@@ -57,6 +73,21 @@ public class UsuarioController {
 
     // listamos todos los clientes cuyo rol solo sea "USER"
     @GetMapping("listar-clientes")
+    @Operation(
+            summary = "Listado de todos los usuarios registrados",
+            description = "Retorna un conjunto de una lista de todos los usuarios, excepto el ADMIN",
+            tags = {"usuarios"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Listado obtenido con éxito",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(type = "array", implementation = Usuario.class)
+                            )
+                    )
+            }
+    )
     public ResponseEntity<List<Usuario>> obtenerUsuarioPorRol(){
         try {
             List<Usuario> usuarios = userRepo.findByRolId(2L); // filtramos por el ID del usuario
@@ -77,6 +108,21 @@ public class UsuarioController {
     // exportamos los datos del usuario en excel
     // listamos todos los clientes cuyo rol solo sea "USER"
     @GetMapping("exportar-excel")
+    @Operation(
+            summary = "Generación de archivo Excel",
+            description = "Genera y retorna un archivo xlsx con los datos de los usuarios",
+            tags = {"usuarios"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Creacion del Excel, éxitosa",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(type = "array", implementation = Usuario.class)
+                            )
+                    )
+            }
+    )
     public void exportExcelUsuario(HttpServletResponse response) throws IOException {
         try {
            reportExcel.exportUsuarioExcel(response, 2L); // rol con id 2

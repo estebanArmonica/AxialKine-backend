@@ -64,6 +64,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/tareas/**").hasAuthority("ADMIN")
                                 .requestMatchers( "/api/items/**").hasAuthority("USER")
                                 .requestMatchers("/api/carrito/**").hasAuthority("USER")
+                                .requestMatchers("/api/payments/**").hasAuthority("USER")
                                 .anyRequest().authenticated()
                 ) //Toda petición http debe ser autorizada
                 .httpBasic(httpBasic -> {});

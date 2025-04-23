@@ -18,4 +18,7 @@ public interface IItemService {
 
     // buscamos por el id del item para listar solo los producto de un usuario
     Optional<Item> buscarPorIdItem(Long id);
+
+    // limpiar el item
+    void limpiarItem(Long id);
 }

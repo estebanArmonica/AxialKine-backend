@@ -11,6 +11,7 @@ import com.tiendaweb.repositories.IUsuarioRepository;
 import com.tiendaweb.security.JwtGenerador;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +38,7 @@ import java.util.Collections;
 
 @RestController
 @RequestMapping("api/auth/")
-@Tag(name = "Authentication", description = "Controller for Authentication")
+@Tag(name = "Authentication", description = "Controlador de Autenticaciones")
 @CrossOrigin(origins = {"http://localhost:4200"},methods = RequestMethod.POST)
 public class AuthController {
     private AuthenticationManager authenticationManager;
@@ -59,14 +60,18 @@ public class AuthController {
     @PostMapping("create-user")
     @Operation(
             summary = "Crear Usuario",
-            description = "Registro de un usuario, el cual retorna un user.",
+            description = "Registro de un usuario, el cual retorna un user con posiblidad de subir imagen.",
             tags = {"Authentication"},
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Registro de un usuario",
+                    description = "Registro de un usuario + imagen",
                     required = true,
                     content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = RegistroDto.class)
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(implementation = RegistroDto.class),
+                            encoding = {
+                                    @Encoding(name = "dtoRegistro", contentType = "application/json"),
+                                    @Encoding(name = "imagen", contentType = MediaType.IMAGE_PNG_VALUE),
+                            }
                     )
             ),
             responses = {
@@ -127,8 +132,12 @@ public class AuthController {
                     description = "Registro de un usuario admin",
                     required = true,
                     content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = RegistroDto.class)
+                            mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(implementation = RegistroDto.class),
+                            encoding = {
+                                @Encoding(name = "dtoRegistro", contentType = "application/json"),
+                                @Encoding(name = "imagen", contentType = MediaType.IMAGE_PNG_VALUE),
+                            }
                     )
             ),
             responses = {

@@ -84,6 +84,9 @@ public class Usuario {
     }
 
     public void setRut(String rut) {
+        if(rut == null || rut.length() != 8){
+            throw new IllegalArgumentException("RUT debe tener exactamente 8 caracteres");
+        }
         this.rut = rut;
     }
 
@@ -116,6 +119,9 @@ public class Usuario {
     }
 
     public void setEmail(String email) {
+        if(email == null || !email.contains("@")){
+            throw new IllegalArgumentException("Email no válido");
+        }
         this.email = email;
     }
 
@@ -132,6 +138,13 @@ public class Usuario {
     }
 
     public void setPassword(String password) {
+        if(password == null){
+            throw new IllegalArgumentException("La contraseña no puede estar vacía");
+        }
+
+        if(password.length() < 4 || password.length() > 100){
+            throw new IllegalArgumentException("La contraseñ debe tener un minimo de 4 caracteres para ser válido");
+        }
         this.password = password;
     }
 

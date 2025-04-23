@@ -19,7 +19,7 @@ public class Item {
 
     // relaciones
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "producto", nullable = false)
+    @JoinColumn(name = "producto", nullable = true)
     @JsonProperty("producto")
     private Producto producto;
 

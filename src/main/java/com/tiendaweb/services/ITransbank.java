@@ -1,6 +1,6 @@
 package com.tiendaweb.services;
 
-import com.tiendaweb.models.Compra;
+import com.tiendaweb.models.transbank.Compra;
 
 public interface ITransbank {
     // creamos una transaccion

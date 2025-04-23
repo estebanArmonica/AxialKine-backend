@@ -1,5 +1,7 @@
 package com.tiendaweb.controllers;
 
+import com.tiendaweb.commands.Command;
+import com.tiendaweb.commands.factory.EstadoCommandFactory;
 import com.tiendaweb.commands.handlers.EstadoCommandHandler;
 import com.tiendaweb.commands.impl.estado.ListEstadoCommandImpl;
 import com.tiendaweb.models.Estado;
@@ -9,21 +11,24 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/estados/")
-@Tag(name = "estados")
+@Tag(name = "estados", description = "Controlador de Estados de los productos")
 @CrossOrigin(origins = {"http://localhost:4200"},
         methods = RequestMethod.GET)
 public class EstadoController {
 
-    private final EstadoCommandHandler commandHandler;
+    private final EstadoCommandFactory commandFactory;
 
     @Autowired
-    public EstadoController(EstadoCommandHandler commandHandler) {
-        this.commandHandler = commandHandler;
+    public EstadoController(EstadoCommandFactory commandFactory) {
+        this.commandFactory = commandFactory;
     }
 
     // listamos todos los estados
@@ -47,8 +52,14 @@ public class EstadoController {
                     )
             }
     )
-    public ResponseEntity<?> obtenerTodo() {
-        ListEstadoCommandImpl command = new ListEstadoCommandImpl();
-        return ResponseEntity.ok(commandHandler.handle(command));
+    public ResponseEntity<List<Estado>> obtenerTodo() {
+        try {
+            Command<List<Estado>> command = commandFactory.obtenerTodoEstadoCommand();
+            List<Estado> estados = command.execute();
+            return ResponseEntity.ok(estados);
+        }catch (Exception e){
+            System.out.println("NO CONTENT: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
     }
 }
